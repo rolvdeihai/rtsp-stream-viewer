@@ -31,6 +31,7 @@ WORKDIR /workspaces/rtsp-stream-viewer
 
 # Expose Daphne port
 EXPOSE 7860
+EXPOSE 3000
 
 # Create an entrypoint script to run backend and frontend concurrently
 RUN echo '#!/bin/bash\n\

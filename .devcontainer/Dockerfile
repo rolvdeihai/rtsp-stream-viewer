@@ -1,5 +1,3 @@
-# .devcontainer/Dockerfile
-
 FROM python:3.10
 
 # Install system dependencies for OpenCV & ffmpeg
@@ -7,22 +5,39 @@ RUN apt-get update && apt-get install -y \
     ffmpeg \
     libsm6 \
     libxext6 \
+    curl \
  && rm -rf /var/lib/apt/lists/*
 
-# Set work directory inside container (root of repo backend folder)
-WORKDIR /workspaces/rtsp-stream-viewer/backend
+# Install Node.js (LTS) and npm
+RUN curl -fsSL https://deb.nodesource.com/setup_18.x | bash - \
+ && apt-get install -y nodejs
 
-# Copy only requirements.txt first (for caching)
-COPY backend/requirements.txt .
+# Set work directory
+WORKDIR /workspaces/rtsp-stream-viewer
 
-# Install Python dependencies globally (inside container)
-RUN pip install --no-cache-dir -r requirements.txt
+# Copy backend requirements and install Python deps
+COPY backend/requirements.txt backend/requirements.txt
+RUN pip install --no-cache-dir -r backend/requirements.txt
 
-# Copy the entire repo
+# Copy entire repo
 COPY . .
+
+# Install frontend dependencies
+WORKDIR /workspaces/rtsp-stream-viewer/frontend
+RUN npm install
+
+# Back to root workspace folder
+WORKDIR /workspaces/rtsp-stream-viewer
 
 # Expose Daphne port
 EXPOSE 7860
 
-# Run Daphne automatically when container starts
-CMD ["daphne", "-b", "0.0.0.0", "-p", "7860", "backend.asgi:application"]
+# Create an entrypoint script to run backend and frontend concurrently
+RUN echo '#!/bin/bash\n\
+cd backend && daphne -b 0.0.0.0 -p 7860 backend.asgi:application &\n\
+cd ../frontend && npm start' > /entrypoint.sh
+
+RUN chmod +x /entrypoint.sh
+
+# Run the entrypoint script
+CMD ["/entrypoint.sh"]

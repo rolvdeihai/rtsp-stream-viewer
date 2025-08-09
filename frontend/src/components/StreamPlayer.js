@@ -1,6 +1,6 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 
-export default function StreamPlayer({ stream, index, onTogglePlay, onDelete }) {
+export default function StreamPlayer({ stream, onTogglePlay, onDelete }) {
   const canvasRef = useRef(null);
   const containerRef = useRef(null);
   const imageRef = useRef(new Image());
@@ -9,9 +9,10 @@ export default function StreamPlayer({ stream, index, onTogglePlay, onDelete }) 
   const [loading, setLoading] = useState(true);
   const wsRef = useRef(null);
   const drawFrameRef = useRef();
-
+  const aspectRatioRef = useRef(16/9);
+  
   // Canvas rendering function
-  const drawFrame = () => {
+  const drawFrame = useCallback(() => {
     const container = containerRef.current;
     const canvas = canvasRef.current;
     
@@ -20,18 +21,16 @@ export default function StreamPlayer({ stream, index, onTogglePlay, onDelete }) 
     const ctx = canvas.getContext('2d');
     const img = imageRef.current;
     
-    // Set canvas dimensions to match container
-    canvas.width = container.clientWidth;
-    canvas.height = container.clientHeight;
+    const containerWidth = container.clientWidth;
+    canvas.width = containerWidth;
+    canvas.height = containerWidth / aspectRatioRef.current;
     
-    // Maintain aspect ratio (cover mode)
     const hRatio = canvas.width / img.width;
     const vRatio = canvas.height / img.height;
     const ratio = Math.max(hRatio, vRatio);
     const offsetX = (canvas.width - img.width * ratio) / 2;
     const offsetY = (canvas.height - img.height * ratio) / 2;
     
-    // Clear and draw image
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(
       img,
@@ -43,20 +42,18 @@ export default function StreamPlayer({ stream, index, onTogglePlay, onDelete }) 
     
     isDrawingRef.current = false;
     
-    // Process next frame if exists
     if (pendingFrameRef.current) {
       processFrame(pendingFrameRef.current);
       pendingFrameRef.current = null;
     }
-  };
+  }, []);
 
-  // Keep drawFrame reference updated
   useEffect(() => {
     drawFrameRef.current = drawFrame;
-  });
+  }, [drawFrame]);
 
   // Frame processing with buffering
-  const processFrame = (data) => {
+  const processFrame = useCallback((data) => {
     if (isDrawingRef.current) {
       pendingFrameRef.current = data;
       return;
@@ -64,97 +61,103 @@ export default function StreamPlayer({ stream, index, onTogglePlay, onDelete }) 
     
     isDrawingRef.current = true;
     imageRef.current.src = `data:image/jpeg;base64,${data}`;
-  };
+  }, []);
 
-  // Set up image onload handler
   useEffect(() => {
     imageRef.current.onload = () => {
-      if (drawFrameRef.current) {
-        drawFrameRef.current();
+      if (imageRef.current.width && imageRef.current.height) {
+        aspectRatioRef.current = imageRef.current.width / imageRef.current.height;
       }
+      drawFrameRef.current();
     };
   }, []);
 
-  // WebSocket connection handling
+  // WebSocket connection handling with reconnection
   useEffect(() => {
-    if (!stream.playing) {
-      if (wsRef.current) {
-        wsRef.current.close();
-        wsRef.current = null;
-      }
-      setLoading(false);
-      return;
-    }
+    let isMounted = true;
+    let ws = null;
+    let reconnectTimeout = null;
 
-    setLoading(true);
-    const encodedUrl = encodeURIComponent(stream.url);
-    const ws = new WebSocket(`ws://localhost:8000/ws/stream/${encodedUrl}/`);
-    wsRef.current = ws;
+    const connect = () => {
+      if (!isMounted || !stream.playing) return;
+      
+      setLoading(true);
+      const encodedUrl = encodeURIComponent(stream.url);
+      ws = new WebSocket(`ws://localhost:8000/ws/stream/${encodedUrl}/`);
+      wsRef.current = ws;
 
-    ws.onmessage = (event) => {
-      processFrame(event.data);
-      setLoading(false);
-    };
-
-    ws.onclose = () => {
-      if (wsRef.current === ws) {
+      ws.onmessage = (event) => {
+        if (!isMounted) return;
+        processFrame(event.data);
         setLoading(false);
-      }
+      };
+
+      ws.onclose = () => {
+        if (!isMounted) return;
+        setLoading(false);
+        
+        // Reconnect if still playing
+        if (stream.playing) {
+          reconnectTimeout = setTimeout(() => {
+            connect();
+          }, 3000);
+        }
+      };
     };
+
+    connect();
 
     return () => {
-      if (wsRef.current) {
-        wsRef.current.close();
-      }
+      isMounted = false;
+      if (reconnectTimeout) clearTimeout(reconnectTimeout);
+      if (ws) ws.close();
     };
-  }, [stream.playing, stream.url]);
+  }, [stream.playing, stream.url, processFrame]);
 
-  const handleFullscreen = () => {
+  const handleFullscreen = useCallback(() => {
     if (containerRef.current) {
       if (document.fullscreenElement) {
         document.exitFullscreen();
       } else {
-        containerRef.current.requestFullscreen().catch((err) => {
-          console.error("Error attempting fullscreen:", err);
-        });
+        containerRef.current.requestFullscreen().catch(console.error);
       }
     }
-  };
+  }, []);
 
   return (
     <div
       ref={containerRef}
-      className="bg-gray-800 rounded-lg shadow-lg p-2 flex flex-col items-center relative min-h-[200px]"
+      className="bg-gray-800 rounded-lg shadow-lg p-2 flex flex-col items-center relative"
     >
       {loading && (
         <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 rounded-lg">
           <div className="loader border-t-transparent border-solid rounded-full border-white border-4 w-8 h-8 animate-spin"></div>
         </div>
       )}
-      <canvas 
-        ref={canvasRef} 
-        className="rounded-lg w-full h-full"
-      />
+      <div className="w-full" style={{ aspectRatio: '16/9' }}>
+        <canvas 
+          ref={canvasRef} 
+          className="rounded-lg w-full h-full"
+        />
+      </div>
       <div className="flex justify-between w-full mt-2 px-1">
-        <span className="text-sm font-semibold text-white truncate max-w-[120px]">
-          {stream.name}
-        </span>
+        <span className="text-sm font-semibold">{stream.name}</span>
         <div className="flex gap-2">
           <button
-            onClick={() => onTogglePlay(index)}
-            className="px-2 py-1 bg-blue-600 text-xs rounded hover:bg-blue-500 text-white"
+            onClick={onTogglePlay}
+            className="px-2 py-1 bg-blue-600 text-xs rounded hover:bg-blue-500"
           >
             {stream.playing ? "Pause" : "Play"}
           </button>
           <button
             onClick={handleFullscreen}
-            className="px-2 py-1 bg-green-600 text-xs rounded hover:bg-green-500 text-white"
+            className="px-2 py-1 bg-green-600 text-xs rounded hover:bg-green-500"
           >
             Fullscreen
           </button>
           <button
-            onClick={() => onDelete(index)}
-            className="px-2 py-1 bg-red-600 text-xs rounded hover:bg-red-500 text-white"
+            onClick={onDelete}
+            className="px-2 py-1 bg-red-600 text-xs rounded hover:bg-red-500"
           >
             Delete
           </button>

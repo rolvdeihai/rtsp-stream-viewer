@@ -28,9 +28,9 @@ DEBUG = True
 ALLOWED_HOSTS = [
     'fatmagician-rtsp-backend.hf.space',
     'localhost',
-    '127.0.0.1'
+    '127.0.0.1',
+    'rolvdeihai.github.io',
 ]
-
 
 # Application definition
 

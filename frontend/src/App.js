@@ -32,7 +32,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-900 text-white flex flex-col items-center p-6">
-      <h1 className="text-3xl font-bold mb-4">:satellite: RTSP Stream Viewer</h1>
+      <h1 className="text-3xl font-bold mb-4">🛰️ RTSP Stream Viewer</h1>
       <StreamInput onAdd={addStream} />
       <StreamGrid
         streams={streams}

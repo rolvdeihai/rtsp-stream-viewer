@@ -110,7 +110,7 @@ const LoginPage = ({ onLogin }) => {
         </form>
 
         <div className="mt-6 text-center text-gray-500 text-sm">
-          <p>Use credentials from your .env.local file</p>
+          <p>Please input your credentials</p>
         </div>
       </div>
     </div>

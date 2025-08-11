@@ -23,6 +23,7 @@ A full-stack application for viewing multiple RTSP streams in real-time with ada
 3. Run the setup files:
    - First run `setup.bat` (wait for installation to complete)
    - Then run `start.bat` to launch the application
+   - RUN_APP.bat is a mistake for earlier testing, please don't run it and ignore it. Use start.bat instead
 4. The application will automatically:
    - Start the backend server
    - Open the stream viewer in your default browser

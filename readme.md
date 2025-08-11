@@ -54,6 +54,12 @@ daphne -p 8000 backend.asgi:application
 2. Configure streams using the admin interface:
    - Username: `admin`
    - Password: `streamviewer123`
+  
+#### Manual Local Setup:
+1. Open Terminal then type: cd frontend
+2. Install dependencies: npm install
+3. Copy paste .env.local from https://drive.google.com/drive/folders/1puxEOGDxZdRU2GV0UR6_DeiZyXYFBxq7?usp=sharing to /frontend
+4. Run the frontend: npm start
 
 ## Configuration Options
 

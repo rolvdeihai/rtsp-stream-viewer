@@ -83,7 +83,7 @@ export default function StreamPlayer({ stream, onTogglePlay, onDelete }) {
       
       setLoading(true);
       const encodedUrl = encodeURIComponent(stream.url);
-      ws = new WebSocket(`ws://rtsp-stream-viewer-production.up.railway.app/ws/stream/${encodedUrl}/`);
+      ws = new WebSocket(`wss://rtsp-stream-viewer-production.up.railway.app/ws/stream/${encodedUrl}/`);
       wsRef.current = ws;
 
       ws.onmessage = (event) => {

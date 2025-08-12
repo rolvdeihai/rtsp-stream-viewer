@@ -1,5 +1,7 @@
 # RTSP Stream Viewer - Comprehensive Setup Guide
 
+# Live Demo URL: https://rolvdeihai.github.io/rtsp-stream-viewer/
+
 ## Project Overview
 A full-stack application for viewing multiple RTSP streams in real-time with adaptive streaming capabilities. Features include:
 - View multiple RTSP streams simultaneously

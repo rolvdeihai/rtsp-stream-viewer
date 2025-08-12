@@ -141,3 +141,23 @@ MIDDLEWARE.insert(0, 'corsheaders.middleware.CorsMiddleware')
 CORS_ALLOW_ALL_ORIGINS = True
 
 ASGI_THREADS = 20
+
+import os
+
+# Add to allowed hosts
+ALLOWED_HOSTS = [
+    'rtsp-stream-viewer-production.up.railway.app',
+    'localhost',
+    '127.0.0.1',
+    '.railway.app',
+]
+
+# Add to bottom of file
+# ======= PRODUCTION SETTINGS =======
+if os.getenv('RAILWAY_ENVIRONMENT'):
+    DEBUG = False
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+    CSRF_TRUSTED_ORIGINS = [
+        'https://rtsp-stream-viewer-production.up.railway.app',
+        'https://*.railway.app'
+    ]

@@ -10,12 +10,17 @@ export default function StreamGrid({ streams, onTogglePlay, onDelete }) {
     );
   }
 
+  const maxColumns = 3;
+  const count = streams.length;
+
+  const columns = Math.min(Math.ceil(Math.sqrt(count)), maxColumns);
+
   return (
     <div
       className="grid gap-4 w-full max-w-6xl"
-      style={{ gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))" }}
+      style={{ gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))` }}
     >
-      {streams.map((stream, idx) => (
+      {streams.map((stream) => (
         <StreamPlayer
           key={stream.id}
           stream={stream}

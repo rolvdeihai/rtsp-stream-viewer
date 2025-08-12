@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
+import { Play, Pause, Maximize, Trash2 } from 'lucide-react';
 
 export default function StreamPlayer({ stream, onTogglePlay, onDelete }) {
   const canvasRef = useRef(null);
@@ -7,6 +8,7 @@ export default function StreamPlayer({ stream, onTogglePlay, onDelete }) {
   const pendingFrameRef = useRef(null);
   const isDrawingRef = useRef(false);
   const [loading, setLoading] = useState(true);
+  const [isHovered, setIsHovered] = useState(false);
   const wsRef = useRef(null);
   const drawFrameRef = useRef();
   const aspectRatioRef = useRef(16/9);
@@ -50,6 +52,19 @@ export default function StreamPlayer({ stream, onTogglePlay, onDelete }) {
 
   useEffect(() => {
     drawFrameRef.current = drawFrame;
+    
+    // Ensure proper sizing on initial render
+    const resizeObserver = new ResizeObserver(() => {
+      if (containerRef.current) {
+        drawFrame();
+      }
+    });
+    
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
+    }
+    
+    return () => resizeObserver.disconnect();
   }, [drawFrame]);
 
   // Frame processing with buffering
@@ -127,40 +142,79 @@ export default function StreamPlayer({ stream, onTogglePlay, onDelete }) {
   return (
     <div
       ref={containerRef}
-      className="bg-gray-800 rounded-lg shadow-lg p-2 flex flex-col items-center relative"
+      className="bg-black rounded-lg shadow-lg overflow-hidden relative"
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
+      {/* Loading Overlay */}
       {loading && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-40 rounded-lg">
-          <div className="loader border-t-transparent border-solid rounded-full border-white border-4 w-8 h-8 animate-spin"></div>
+        <div className="absolute inset-0 flex items-center justify-center bg-black/80 z-10">
+          <div className="w-8 h-8 border-4 border-white/20 border-t-white rounded-full animate-spin"></div>
         </div>
       )}
+
+      {/* Video Canvas */}
       <div className="w-full" style={{ aspectRatio: '16/9' }}>
         <canvas 
           ref={canvasRef} 
-          className="rounded-lg w-full h-full"
+          className="w-full h-full"
         />
       </div>
-      <div className="flex justify-between w-full mt-2 px-1">
-        <span className="text-sm font-semibold">{stream.name}</span>
-        <div className="flex gap-2">
-          <button
-            onClick={onTogglePlay}
-            className="px-2 py-1 bg-blue-600 text-xs rounded hover:bg-blue-500"
-          >
-            {stream.playing ? "Pause" : "Play"}
-          </button>
-          <button
-            onClick={handleFullscreen}
-            className="px-2 py-1 bg-green-600 text-xs rounded hover:bg-green-500"
-          >
-            Fullscreen
-          </button>
-          <button
-            onClick={onDelete}
-            className="px-2 py-1 bg-red-600 text-xs rounded hover:bg-red-500"
-          >
-            Delete
-          </button>
+
+      {/* Center Play Button (only when paused) */}
+      {!stream.playing && isHovered && (
+        <button
+          onClick={onTogglePlay}
+          className="absolute inset-0 m-auto w-16 h-16 bg-white/20 backdrop-blur rounded-full flex items-center justify-center hover:bg-white/30 transition-all duration-200"
+        >
+          <Play className="w-8 h-8 text-white ml-1" />
+        </button>
+      )}
+
+      {/* Bottom Controls */}
+      <div 
+        className={`absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent p-3 transition-opacity ${
+          isHovered ? 'opacity-100' : 'opacity-0'
+        }`}
+      >
+        <div className="flex justify-between items-center">
+          <div className="text-white">
+            <div className="font-medium">{stream.name}</div>
+            <div className="flex items-center text-sm">
+              <div className="w-2 h-2 bg-red-500 rounded-full mr-2 animate-pulse"></div>
+              {stream.playing ? "LIVE" : "PAUSED"}
+            </div>
+          </div>
+          
+          <div className="flex gap-2">
+            <button
+              onClick={onTogglePlay}
+              className="p-2 bg-white/10 backdrop-blur rounded-lg hover:bg-white/20"
+              title={stream.playing ? "Pause" : "Play"}
+            >
+              {stream.playing ? (
+                <Pause className="w-4 h-4 text-white" />
+              ) : (
+                <Play className="w-4 h-4 text-white" />
+              )}
+            </button>
+            
+            <button
+              onClick={handleFullscreen}
+              className="p-2 bg-white/10 backdrop-blur rounded-lg hover:bg-white/20"
+              title="Fullscreen"
+            >
+              <Maximize className="w-4 h-4 text-white" />
+            </button>
+            
+            <button
+              onClick={onDelete}
+              className="p-2 bg-white/10 backdrop-blur rounded-lg hover:bg-red-500/80"
+              title="Delete"
+            >
+              <Trash2 className="w-4 h-4 text-white" />
+            </button>
+          </div>
         </div>
       </div>
     </div>
